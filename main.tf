@@ -20,10 +20,10 @@ resource "aws_vpc" "main" {
 
 }
 
-resource "aws_subnet" "public"{
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "ap-south-2a"
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "ap-south-2a"
   map_public_ip_on_launch = true
 
   tags = {
@@ -73,7 +73,7 @@ resource "aws_security_group" "ec2" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["3.197.74.204/32"]
+    cidr_blocks = ["103.197.74.204/32"]
   }
 
   ingress {
@@ -93,5 +93,18 @@ resource "aws_security_group" "ec2" {
 
   tags = {
     Name = "terraform-ec2-sg"
+  }
+}
+
+resource "aws_instance" "web" {
+  ami           = "ami-001af333c5cf65178"
+  instance_type = "t3.micro"
+
+  subnet_id                   = aws_subnet.public.id
+  vpc_security_group_ids      = [aws_security_group.ec2.id]
+  associate_public_ip_address = true
+
+  tags = {
+    Name = "terraform-web-server"
   }
 }
