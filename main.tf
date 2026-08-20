@@ -78,7 +78,7 @@ resource "aws_security_group" "ec2" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["103.197.74.204/32"]
+    cidr_blocks = [var.my_ip]
   }
 
   ingress {
@@ -102,7 +102,7 @@ resource "aws_security_group" "ec2" {
 }
 
 resource "aws_instance" "web" {
-  ami           = "ami-001af333c5cf65178"
+  ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
 
   subnet_id                   = aws_subnet.public.id
@@ -113,5 +113,28 @@ resource "aws_instance" "web" {
 
   tags = {
     Name = "terraform-web-server"
+  }
+}
+
+# Data block to fetch the latest Amazon Linux 2 AMI
+
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  owners = ["099720109477"]
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
   }
 }

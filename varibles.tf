@@ -15,3 +15,9 @@ variable "instance_type" {
   type        = string
   default     = "t3.micro"
 }
+
+variable "my_ip" {
+  description = "My IP address for SSH access"
+  type        = string
+  default     = "103.197.74.204/32"
+}
