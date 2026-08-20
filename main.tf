@@ -8,11 +8,11 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-south-2"
+  region = var.aws_region
 }
 
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block = var.vpc_cidr
 
   tags = {
     Name = "terraform-learning-vpc"
@@ -103,7 +103,7 @@ resource "aws_security_group" "ec2" {
 
 resource "aws_instance" "web" {
   ami           = "ami-001af333c5cf65178"
-  instance_type = "t3.micro"
+  instance_type = var.instance_type
 
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.ec2.id]
