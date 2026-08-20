@@ -63,6 +63,11 @@ resource "aws_route_table" "public" {
   }
 }
 
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
 resource "aws_security_group" "ec2" {
   name        = "terraform-ec2-sg"
   description = "Security group for Terraform learning EC2"
@@ -103,6 +108,8 @@ resource "aws_instance" "web" {
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.ec2.id]
   associate_public_ip_address = true
+
+  key_name = "learning-key"
 
   tags = {
     Name = "terraform-web-server"
