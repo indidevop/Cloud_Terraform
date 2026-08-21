@@ -111,9 +111,9 @@ resource "aws_instance" "web" {
 
   key_name = "learning-key"
 
-  tags = {
-    Name = "terraform-web-server"
-  }
+  tags = merge(local.common_tags, {
+  Name = "terraform-web-server"
+})
 }
 
 # Data block to fetch the latest Amazon Linux 2 AMI
