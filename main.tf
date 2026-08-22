@@ -11,17 +11,8 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr
-
-  tags = {
-    Name = "terraform-learning-vpc"
-  }
-
-}
-
 resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
+  vpc_id                  = module.vpc.vpc_id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "ap-south-2a"
   map_public_ip_on_launch = true
@@ -33,7 +24,7 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_subnet" "private" {
-  vpc_id            = aws_vpc.main.id
+  vpc_id            = module.vpc.vpc_id
   cidr_block        = "10.0.2.0/24"
   availability_zone = "ap-south-2b"
 
@@ -43,7 +34,7 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   tags = {
     Name = "terraform-igw"
@@ -51,7 +42,7 @@ resource "aws_internet_gateway" "main" {
 }
 
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -71,7 +62,7 @@ resource "aws_route_table_association" "public" {
 resource "aws_security_group" "ec2" {
   name        = "terraform-ec2-sg"
   description = "Security group for Terraform learning EC2"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = module.vpc.vpc_id
 
   ingress {
     description = "SSH from my IP"
@@ -137,4 +128,13 @@ data "aws_ami" "ubuntu" {
     name   = "root-device-type"
     values = ["ebs"]
   }
+}
+
+# Passing variables to the VPC module
+
+module "vpc" {
+  source = "./modules/vpc"
+
+  vpc_cidr = var.vpc_cidr
+  name     = "terraform-learning-vpc"
 }
