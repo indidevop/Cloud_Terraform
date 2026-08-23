@@ -11,20 +11,12 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_internet_gateway" "main" {
-  vpc_id = module.vpc.vpc_id
-
-  tags = {
-    Name = "terraform-igw"
-  }
-}
-
 resource "aws_route_table" "public" {
   vpc_id = module.vpc.vpc_id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
+    gateway_id = module.vpc.internet_gateway_id
   }
 
   tags = {

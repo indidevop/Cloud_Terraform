@@ -26,3 +26,11 @@ resource "aws_subnet" "private" {
     Name = "terraform-learning-private-subnet"
   }
 }
+
+resource "aws_internet_gateway" "this" {
+  vpc_id = aws_vpc.this.id
+
+  tags = {
+    Name = "terraform-igw"
+  }
+}
