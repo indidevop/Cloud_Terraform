@@ -5,6 +5,13 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket       = "terraform-learning-state-787308165643"
+    key          = "terraform/terraform.tfstate"
+    region       = "ap-south-2"
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
