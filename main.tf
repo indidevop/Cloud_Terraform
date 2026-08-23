@@ -11,16 +11,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_subnet" "private" {
-  vpc_id            = module.vpc.vpc_id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "ap-south-2b"
-
-  tags = {
-    Name = "terraform-learning-private-subnet"
-  }
-}
-
 resource "aws_internet_gateway" "main" {
   vpc_id = module.vpc.vpc_id
 
@@ -91,8 +81,8 @@ resource "aws_instance" "web" {
   key_name = "learning-key"
 
   tags = merge(local.common_tags, {
-  Name = "terraform-web-server"
-})
+    Name = "terraform-web-server"
+  })
 }
 
 # Data block to fetch the latest Amazon Linux 2 AMI
@@ -123,8 +113,11 @@ data "aws_ami" "ubuntu" {
 module "vpc" {
   source = "./modules/vpc"
 
-  vpc_cidr               = var.vpc_cidr
-  name                   = "terraform-learning-vpc"
-  public_subnet_cidr     = "10.0.1.0/24"
+  vpc_cidr                 = var.vpc_cidr
+  name                     = "terraform-learning-vpc"
+  public_subnet_cidr       = "10.0.1.0/24"
   public_availability_zone = "ap-south-2a"
+
+  private_subnet_cidr       = "10.0.2.0/24"
+  private_availability_zone = "ap-south-2b"
 }

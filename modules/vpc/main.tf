@@ -16,3 +16,13 @@ resource "aws_subnet" "public" {
     Name = "terraform-learning-public-subnet"
   }
 }
+
+resource "aws_subnet" "private" {
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = var.private_subnet_cidr
+  availability_zone = var.private_availability_zone
+
+  tags = {
+    Name = "terraform-learning-private-subnet"
+  }
+}
