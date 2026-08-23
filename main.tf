@@ -11,22 +11,10 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_route_table" "public" {
-  vpc_id = module.vpc.vpc_id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = module.vpc.internet_gateway_id
-  }
-
-  tags = {
-    Name = "terraform-public-route-table"
-  }
-}
 
 resource "aws_route_table_association" "public" {
   subnet_id      = module.vpc.public_subnet_id
-  route_table_id = aws_route_table.public.id
+  route_table_id = module.vpc.public_route_table_id
 }
 
 resource "aws_security_group" "ec2" {
