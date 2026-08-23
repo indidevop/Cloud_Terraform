@@ -12,11 +12,6 @@ provider "aws" {
 }
 
 
-resource "aws_route_table_association" "public" {
-  subnet_id      = module.vpc.public_subnet_id
-  route_table_id = module.vpc.public_route_table_id
-}
-
 resource "aws_security_group" "ec2" {
   name        = "terraform-ec2-sg"
   description = "Security group for Terraform learning EC2"
