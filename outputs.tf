@@ -5,7 +5,7 @@ output "vpc_id" {
 
 output "public_subnet_id" {
   description = "ID of the public subnet"
-  value       = aws_subnet.public.id
+  value       = module.vpc.public_subnet_id
 }
 
 output "ec2_instance_id" {

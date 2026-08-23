@@ -11,18 +11,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_subnet" "public" {
-  vpc_id                  = module.vpc.vpc_id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "ap-south-2a"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "terraform-learning-public-subnet"
-  }
-
-}
-
 resource "aws_subnet" "private" {
   vpc_id            = module.vpc.vpc_id
   cidr_block        = "10.0.2.0/24"
@@ -55,7 +43,7 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
+  subnet_id      = module.vpc.public_subnet_id
   route_table_id = aws_route_table.public.id
 }
 
@@ -96,7 +84,7 @@ resource "aws_instance" "web" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
 
-  subnet_id                   = aws_subnet.public.id
+  subnet_id                   = module.vpc.public_subnet_id
   vpc_security_group_ids      = [aws_security_group.ec2.id]
   associate_public_ip_address = true
 
@@ -135,6 +123,8 @@ data "aws_ami" "ubuntu" {
 module "vpc" {
   source = "./modules/vpc"
 
-  vpc_cidr = var.vpc_cidr
-  name     = "terraform-learning-vpc"
+  vpc_cidr               = var.vpc_cidr
+  name                   = "terraform-learning-vpc"
+  public_subnet_cidr     = "10.0.1.0/24"
+  public_availability_zone = "ap-south-2a"
 }
