@@ -11,7 +11,6 @@
 locals {
   environments = toset([
     "dev",
-    "staging",
     "prod"
   ])
 }
