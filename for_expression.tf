@@ -40,3 +40,8 @@ output "environment_names_map" {
 output "unknown_environment" {
   value = lookup(local.environment_instances, "test", "t3.micro")
 }
+
+# Using try() function to handle the case where the key does not exist in the map
+output "instance_types_try" {
+  value = try(local.environment_instances["test"], "t3.micro")
+}
