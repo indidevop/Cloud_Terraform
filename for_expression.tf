@@ -35,3 +35,8 @@ locals {
 output "environment_names_map" {
   value = local.environment_names_map
 }
+
+# If test environment is not found in the map, return a default value of "t3.micro"
+output "unknown_environment" {
+  value = lookup(local.environment_instances, "test", "t3.micro")
+}
