@@ -1,186 +1,238 @@
-# Building AWS Infra using Terraform
+# Terraform and AWS: A Beginner's Guided Example
 
-<!-- Add your AWS architecture diagram as `aws-architecture.png` in the repo, or update the path below -->
-![AWS Architecture Diagram](./aws_terraform)
-*AWS architecture diagram — add or replace `aws-architecture.png` with your diagram.*
+![AWS Terraform architecture](./aws_terraform.png)
 
-A simple, incremental Terraform example repository that builds a small AWS environment (VPC, subnets, IGW, route tables, EC2 with key pair and security group) using modules and demonstrates moving state to an S3 backend. This README explains the repo structure, how the project evolved (with links to the commits), and step-by-step commands so you can learn Terraform by reading and running the code.
+*Architecture created by this Terraform project.*
 
-Table of Contents
-- About this repo
-- Learning goals & recommended order
-- Repo structure
-- Key commits (use these to follow the project history)
-- Quick start (prerequisites + run commands)
-- Backend and state (S3) — migration notes
-- How modules were introduced (explain progression)
-- Useful Terraform tips & learning resources
-- Contributing & cleanup
+This repository is a hands-on introduction to Terraform. It creates a small AWS network and an EC2 web server, while demonstrating variables, outputs, modules, data sources, loops, local values, and conditional expressions.
 
----
+You do not need to know Terraform before starting. Read the sections in order, run the commands one at a time, and inspect the plan before approving any change.
 
-About this repo
-This repository demonstrates building AWS infrastructure with Terraform. The project was built incrementally — each commit adds a small piece (provider, VPC, subnets, IGW, route tables, EC2, key pair, security group) or refactors resources into modules. Use the commit links below to study each change and learn typical Terraform patterns.
+## What Terraform does
 
-Learning goals & recommended order
-1. Read the initial commit history and provider configuration to learn how the project starts. See "Add provider" (commit).
-2. Learn how resources are created: VPC → subnets → IGW → route tables → EC2, SG, key pair.
-3. See how variables, outputs, and data blocks are used and why they matter.
-4. Learn how to modularize Terraform by following commits that migrate resources into modules.
-5. Learn about state management and migrating state to an S3 backend.
+Terraform is an infrastructure-as-code tool. Instead of creating AWS resources by clicking through the console, you describe the desired result in `.tf` files. Terraform then:
 
-If you are new to Terraform, follow these steps in this order to learn effectively:
-- Inspect the provider commit and basic resources.
-- Run `terraform init`, `terraform plan`, `terraform apply` in a safe test AWS account.
-- Follow later commits that modularize the infra to see best practices for reuse.
+1. Reads your configuration and compares it with its state file.
+2. Builds a dependency graph, such as "create the VPC before the subnet".
+3. Shows a proposed change with `terraform plan`.
+4. Makes the approved change with `terraform apply`.
 
-Repo structure
-- modules/
-  - vpc/            (VPC module introduced in commit "Added VPC as module")
-  - public_subnet/  (public subnet module)
-  - private_subnet/ (private subnet module)
-  - igw/            (Internet Gateway module)
-  - route_table/    (Public route table & association module)
-  - ec2/            (EC2 instance, security group, key pair module)
-- main.tf / root modules and top-level configuration
-- variables.tf
-- outputs.tf
-- .gitignore
+Terraform is declarative: you describe *what* should exist, not every API call needed to create it. Running `plan` again after nothing changed should normally produce no changes.
 
-Key commits (follow these to learn the project's progression)
-- Add provider — https://github.com/indidevop/Cloud_Terraform/commit/3fa0f1a802c61087db7df7895c6d376ab586e37f
-  - The starting point: provider configuration and initial Terraform setup.
-- Building AWS infra using terraform — https://github.com/indidevop/Cloud_Terraform/commit/a00741bb70c3ceb966503452167891f8ad578553
-  - First higher-level commit indicating the repository's purpose.
-- Added VPC, public and private subnets — https://github.com/indidevop/Cloud_Terraform/commit/a9d84e60525bfa7f497bfa8efbd98eb9b11600cd
-  - Introduces the VPC and both subnet types.
-- Added IGW — https://github.com/indidevop/Cloud_Terraform/commit/816852b71b59a39a881a63efbe3e3ff4cf58b40f
-  - Adds the Internet Gateway to enable internet access for public subnets.
-- Added public route table — https://github.com/indidevop/Cloud_Terraform/commit/282df4c16aa878f1ee8c8d640ccab99d18ff3877
-  - Adds route table for public subnets; important for routing to the IGW.
-- Created sg for ec2 — https://github.com/indidevop/Cloud_Terraform/commit/cd93eede02dec61ae48af396ca0a39ac8150d35b
-  - Security group rules for EC2 instances.
-- Created ec2 — https://github.com/indidevop/Cloud_Terraform/commit/964068d4815c8ab57bc5302e041fdd1837b00cc8
-  - EC2 instance creation and associated resources.
-- Added key pair to ec2 — https://github.com/indidevop/Cloud_Terraform/commit/e6afd9d289932f2a9bd4c9db1dc5adcab1ebcf94
-  - Adds key pair resource used for access to EC2.
-- Added variables file — https://github.com/indidevop/Cloud_Terraform/commit/cf92eedb753e394c9f7e6ceb0e73e84b7f6895af
-  - Introduces variables to parametrize the configuration.
-- Added variables and outputs file — https://github.com/indidevop/Cloud_Terraform/commit/ee89c8f1eb64a6a763490e2ad488518ac51d2b69
-  - Adds outputs to expose key information after apply.
-- Added data block — https://github.com/indidevop/Cloud_Terraform/commit/030d5db5c4842039009e86e89cde6c6352c06f9c
-  - Uses data blocks (e.g., to read AMI info or existing resources).
-- Ignore Terraform generated files (.gitignore) — https://github.com/indidevop/Cloud_Terraform/commit/1c345adb746f216b0528b11888c2d55eb51c4492
-  - Ensures local state and generated files are not committed.
-- Added VPC as module — https://github.com/indidevop/Cloud_Terraform/commit/07d7ec4ad3446cb26739ef25c3cafefc0c1f7e4a
-  - Starts modularizing the VPC.
-- Added public subnet as module — https://github.com/indidevop/Cloud_Terraform/commit/e7cb3560d1ebf15f319e6a8c13c920c227ff8edf
-  - Moves public subnet to its own module.
-- Migrated private subnet to module — https://github.com/indidevop/Cloud_Terraform/commit/2b582abc32be21d24639221f08196db6270fb524
-  - Moves private subnet to module.
-- Migrated IGW to module — https://github.com/indidevop/Cloud_Terraform/commit/c37c36ab7585bc522aa710bfe85523f102fdde63
-  - IGW moved to module for reuse/clarity.
-- Migrated public route table to module — https://github.com/indidevop/Cloud_Terraform/commit/90160a3c6cd532003a9d9fcc6be947d191b1ad4e
-  - Route table moved into a module.
-- Migrated public route table association to module — https://github.com/indidevop/Cloud_Terraform/commit/7481eb19aa704918ff6b55ca3cfd1434a5451f10
-  - Route table association moved to module.
-- Created S3 bucket using cli and added its info in the backend block, then init -reconfigure to migrate state to S3. — https://github.com/indidevop/Cloud_Terraform/commit/3d2da200ba91d150beff9fb57754647ad3906c3d
-  - Shows how the repo migrated Terraform state to an S3 backend (state management example).
+## What this project creates
 
-Quick start
+The root configuration calls a reusable VPC module. Together they create:
 
-Prerequisites
-- Terraform (v1.0+ recommended). Check with `terraform version`.
-- AWS CLI configured (credentials + region) or environment variables set (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION).
-- A non-production AWS account for testing.
+- A VPC with CIDR range `10.0.0.0/16`.
+- One public subnet and one private subnet.
+- An Internet Gateway and a public route table.
+- An Ubuntu 24.04 AMI lookup.
+- An EC2 `t3.micro` instance in the public subnet.
+- A security group allowing SSH from `my_ip` and HTTP from the internet.
+- Two example S3 buckets using `for_each`.
 
-Clone the repo:
-git clone https://github.com/indidevop/Cloud_Terraform.git
-cd Cloud_Terraform
+The EC2 instance can incur AWS charges. This is a learning project, not a production-ready network. The private subnet has no NAT Gateway, so resources placed there do not have outbound internet access.
 
-Initialize and use the S3 backend (if you've added the backend bucket)
-- This repo includes an S3 backend migration in commit [3d2da20]. If the backend is configured, run:
-  terraform init
-  # If you need to reconfigure the backend (moved state to S3):
-  terraform init -reconfigure
-  # To inspect the plan:
-  terraform plan -var-file="terraform.tfvars"
-  terraform apply -var-file="terraform.tfvars"
+## Before you run it
 
-If the S3 backend is not yet available in your AWS account, remove or comment the backend block from `main.tf` temporarily and run:
-  terraform init
-  terraform plan
-  terraform apply
+You need:
 
-State and backend notes (S3)
-- The project demonstrates migrating state to S3 in commit [3d2da200](https://github.com/indidevop/Cloud_Terraform/commit/3d2da200ba91d150beff9fb57754647ad3906c3d).
-- Typical backend configuration (example — check your repo's backend block):
-  backend "s3" {
-    bucket = "your-terraform-state-bucket"
-    key    = "cloud_terraform/terraform.tfstate"
-    region = "us-east-1"
-  }
-- Use `terraform init -reconfigure` when switching or migrating backends, and always lock state when multiple collaborators may run terraform at once (enable DynamoDB state locking if needed).
+- Terraform installed. Check with `terraform version`.
+- An AWS account with permission to create VPC, EC2, IAM-related key-pair access, and S3 resources.
+- AWS credentials configured through the AWS CLI (`aws configure`) or environment variables. Verify them with `aws sts get-caller-identity`.
+- An AWS key pair named `learning-key` in the configured region. The EC2 resource refers to this existing key pair; this repository does not create it.
+- Your public IP in CIDR notation, for example `203.0.113.10/32`. `/32` means one IP address.
 
-How modules were introduced (progression to study)
-- The project begins with flat resource definitions (VPC, subnets, IGW, route tables) introduced in earlier commits (see commits between 2026-08-19 and 2026-08-21).
-- Later commits progressively move resources into modules to improve reuse:
-  - VPC module: https://github.com/indidevop/Cloud_Terraform/commit/07d7ec4ad3446cb26739ef25c3cafefc0c1f7e4a
-  - Public & private subnet modules: https://github.com/indidevop/Cloud_Terraform/commit/e7cb3560d1ebf15f319e6a8c13c920c227ff8edf and https://github.com/indidevop/Cloud_Terraform/commit/2b582abc32be21d24639221f08196db6270fb524
-  - IGW & route table modularization: https://github.com/indidevop/Cloud_Terraform/commit/c37c36ab7585bc522aa710bfe85523f102fdde63 and https://github.com/indidevop/Cloud_Terraform/commit/90160a3c6cd532003a9d9fcc6be947d191b1ad4e
+Do not put AWS access keys in Terraform files or commit them. Use a separate learning account or a tightly restricted IAM identity wherever possible.
 
-Learning tips & recommended reading
-- Read commits in chronological order to see how the author builds and then refactors the infra.
-- Look at how variables and outputs were added (commits: https://github.com/indidevop/Cloud_Terraform/commit/cf92eedb753e394c9f7e6ceb0e73e84b7f6895af and https://github.com/indidevop/Cloud_Terraform/commit/ee89c8f1eb64a6a763490e2ad488518ac51d2b69).
-- Inspect the data block usage for real examples of looking up existing resources or AMIs: https://github.com/indidevop/Cloud_Terraform/commit/030d5db5c4842039009e86e89cde6c6352c06f9c
-- When you run code, try toggling variable values and re-running `terraform plan` to see incremental changes.
+## How state evolved in this project
 
-Commands cheat sheet
-- terraform init
-- terraform plan -var-file="terraform.tfvars"
-- terraform apply -var-file="terraform.tfvars"
-- terraform destroy -var-file="terraform.tfvars"
-- terraform fmt
-- terraform validate
-- terraform state list
-- terraform init -reconfigure (when migrating backends)
+At the beginning, this project used Terraform's default **local backend**. In that setup, Terraform stored its state in a local `terraform.tfstate` file in the project directory. Local state is convenient for experimenting alone, but it is easy to lose, difficult to share, and unsafe to use when two people run Terraform at the same time.
 
-Contributing
-- Use branches for changes and open PRs.
-- Don't commit `.tfstate` or `.terraform/` — see commit that added .gitignore: https://github.com/indidevop/Cloud_Terraform/commit/1c345adb746f216b0528b11888c2d55eb51c4492
+The S3 backend was added later, after the AWS resources had already been developed. The current configuration therefore points at S3, while the state backup files in the repository show traces of the earlier local-state workflow. This is a useful progression to study:
 
-Cleaning up (important)
-- After testing, run `terraform destroy -var-file="terraform.tfvars"` to remove resources to avoid AWS charges.
-- Make sure to delete the S3 state bucket if you created one only for testing (and its DynamoDB lock table if used).
+1. Start with local state to understand the Terraform workflow.
+2. Build and inspect the resources with `init`, `plan`, `apply`, and `destroy`.
+3. Create a protected S3 bucket and move the existing state there.
+4. Reinitialize Terraform so future runs use the shared backend.
 
-Reference commit timeline (short)
-- a00741b — Building AWS infra using terraform — https://github.com/indidevop/Cloud_Terraform/commit/a00741bb70c3ceb966503452167891f8ad578553
-- 3fa0f1a — Add provider — https://github.com/indidevop/Cloud_Terraform/commit/3fa0f1a802c61087db7df7895c6d376ab586e37f
-- a9d84e6 — Added VPC, public and private subnets — https://github.com/indidevop/Cloud_Terraform/commit/a9d84e60525bfa7f497bfa8efbd98eb9b11600cd
-- 816852b — Added IGW — https://github.com/indidevop/Cloud_Terraform/commit/816852b71b59a39a881a63efbe3e3ff4cf58b40f
-- 282df4c — Added public route table — https://github.com/indidevop/Cloud_Terraform/commit/282df4c16aa878f1ee8c8d640ccab99d18ff3877
-- cd93eed — Created sg for ec2 — https://github.com/indidevop/Cloud_Terraform/commit/cd93eede02dec61ae48af396ca0a39ac8150d35b
-- 964068d — Created ec2 — https://github.com/indidevop/Cloud_Terraform/commit/964068d4815c8ab57bc5302e041fdd1837b00cc8
-- e6afd9d — Added key pair to ec2 — https://github.com/indidevop/Cloud_Terraform/commit/e6afd9d289932f2a9bd4c9db1dc5adcab1ebcf94
-- cf92eed — Added variables file — https://github.com/indidevop/Cloud_Terraform/commit/cf92eedb753e394c9f7e6ceb0e73e84b7f6895af
-- ee89c8f — Added variables and outputs file — https://github.com/indidevop/Cloud_Terraform/commit/ee89c8f1eb64a6a763490e2ad488518ac51d2b69
-- 030d5db — Added data block — https://github.com/indidevop/Cloud_Terraform/commit/030d5db5c4842039009e86e89cde6c6352c06f9c
-- 07d7ec4 — Added VPC as module — https://github.com/indidevop/Cloud_Terraform/commit/07d7ec4ad3446cb26739ef25c3cafefc0c1f7e4a
-- e7cb356 — Added public subnet as module — https://github.com/indidevop/Cloud_Terraform/commit/e7cb3560d1ebf15f319e6a8c13c920c227ff8edf
-- 2b582ab — Migrated private subnet to module — https://github.com/indidevop/Cloud_Terraform/commit/2b582abc32be21d24639221f08196db6270fb524
-- c37c36a — Migrated IGW to module — https://github.com/indidevop/Cloud_Terraform/commit/c37c36ab7585bc522aa710bfe85523f102fdde63
-- 90160a3 — Migrated public route table to module — https://github.com/indidevop/Cloud_Terraform/commit/90160a3c6cd532003a9d9fcc6be947d191b1ad4e
-- 7481eb1 — Migrated public route table association to module — https://github.com/indidevop/Cloud_Terraform/commit/7481eb19aa704918ff6b55ca3cfd1434a5451f10
-- 3d2da20 — Created S3 bucket using cli and added its info in the backend block, then init -reconfigure to migrate state to S3 — https://github.com/indidevop/Cloud_Terraform/commit/3d2da200ba91d150beff9fb57754647ad3906c3d
+### Initial local workflow
 
-Further help / learning resources
-- Terraform docs: https://www.terraform.io/docs
-- AWS provider docs: https://registry.terraform.io/providers/hashicorp/aws/latest/docs
-- State and backends: https://www.terraform.io/language/state
+With the `backend "s3"` block temporarily removed or commented out, Terraform uses local state automatically:
 
----
+```powershell
+terraform init
+terraform plan
+terraform apply
+```
 
-If you want, I can:
-- Commit this README to your repo.
-- Add inline code snippets extracted from current files (e.g., actual backend block, sample module call) referencing the precise file lines or commits.
-- Create a sample terraform.tfvars.example and a checklist for safe testing (IAM least-privilege, cost estimate).
+Terraform writes the state locally. Do not use this mode for shared or production infrastructure, and do not commit the resulting state file.
+
+### Important: the S3 backend
+
+Configure `main.tf` to store Terraform state in an S3 bucket and AWS region that you control. The values below are generic examples:
+
+```hcl
+backend "s3" {
+  bucket       = "your-terraform-state-bucket"
+  key          = "terraform-learning/terraform.tfstate"
+  region       = "your-aws-region"
+  use_lockfile = true
+}
+```
+
+Replace all three placeholders before running `terraform init`. S3 bucket names must be globally unique, so choose a name such as `my-terraform-state-12345`. The bucket must already exist in the selected region. A backend stores Terraform's record of what it manages; it is not an AWS resource that this configuration creates. State can contain sensitive information, so protect the bucket and never commit `.tfstate` files.
+
+If you do not own this bucket, change the backend to a bucket you control before initializing, or temporarily remove the `backend "s3"` block for local-only learning. When moving existing local state to S3, keep the same resource configuration and run:
+
+```powershell
+terraform init -reconfigure
+```
+
+Terraform will ask whether the existing local state should be copied to the new backend. Confirm that only when the destination bucket and key are correct. `-reconfigure` tells Terraform to use the new backend configuration; it does not create the bucket.
+
+Do not delete or overwrite shared state without understanding who uses it.
+
+## First run
+
+From this directory, run the following in order:
+
+```powershell
+terraform init
+terraform fmt -recursive
+terraform validate
+terraform plan
+```
+
+`init` downloads the AWS provider and initializes the backend. `fmt` applies Terraform's standard formatting. `validate` checks configuration structure. `plan` is a preview: it does not create resources.
+
+Read the plan carefully. If it looks correct, create the resources:
+
+```powershell
+terraform apply
+```
+
+Terraform asks for confirmation. Type `yes` only after reviewing the plan. When it finishes, Terraform prints the outputs, including the EC2 public IP. You can print them later with:
+
+```powershell
+terraform output
+terraform output ec2_public_ip
+```
+
+## Learn the files in this order
+
+Terraform automatically loads every `.tf` file in one directory, so the filename does not control execution order. `varibles.tf` is misspelled, but Terraform still loads it because it ends in `.tf`.
+
+1. **[main.tf](main.tf)**: required AWS provider, S3 backend, security group, EC2 instance, AMI data source, and VPC module call.
+2. **[modules/vpc/main.tf](modules/vpc/main.tf)**: the VPC, subnets, Internet Gateway, route table, and route association resources.
+3. **[modules/vpc/variables.tf](modules/vpc/variables.tf)**: inputs accepted by the module.
+4. **[modules/vpc/outputs.tf](modules/vpc/outputs.tf)**: values returned by the module to the root configuration.
+5. **[varibles.tf](varibles.tf)**: root input variables and their defaults. A variable is a configurable input rather than a hard-coded value.
+6. **[outputs.tf](outputs.tf)**: useful values displayed after apply.
+7. **[locals.tf](locals.tf)**: calculated values and shared tags. Locals are named expressions used inside the configuration.
+8. **[count.tf](count.tf)**: a `for_each` example. The commented block shows the alternative `count` approach.
+9. **[for_expression.tf](for_expression.tf)**: list and map comprehensions, `lookup`, and `try`.
+10. **[ternery_expressions.tf](ternery_expressions.tf)**: a conditional expression. The filename is misspelled, but the file is valid Terraform.
+
+## Core Terraform ideas in this example
+
+### Resources
+
+A resource creates or manages something. For example, `aws_instance.web` is the Terraform address of the EC2 instance. References such as `aws_security_group.ec2.id` connect resources and create dependencies.
+
+### Providers
+
+A provider is a plugin that translates Terraform configuration into API calls for a platform. This project uses the AWS provider, constrained to version 5.x by `version = "~> 5.0"`.
+
+### Modules
+
+A module is a folder of Terraform configuration that can be reused. The root module passes values to `modules/vpc`:
+
+```hcl
+module "vpc" {
+  source       = "./modules/vpc"
+  vpc_cidr     = var.vpc_cidr
+  public_subnet_cidr = "10.0.1.0/24"
+  # other module inputs omitted here
+}
+```
+
+The child module creates resources privately and exposes selected IDs through outputs. The root uses those outputs as `module.vpc.public_subnet_id` and `module.vpc.vpc_id`.
+
+### Variables, locals, and outputs
+
+- **Variables** are inputs, such as `var.instance_type`.
+- **Locals** are reusable calculated expressions, such as common tags.
+- **Outputs** are values Terraform prints for people or other modules.
+
+Override a default without editing the source:
+
+```powershell
+terraform plan -var="instance_type=t3.small" -var="my_ip=203.0.113.10/32"
+```
+
+For repeatable settings, create a local `terraform.tfvars` file. Do not commit personal IP addresses or secrets.
+
+### Data sources
+
+`data "aws_ami" "ubuntu"` reads an existing AMI instead of creating one. Its filters select the most recent Ubuntu 24.04 image owned by Canonical. The instance then uses `data.aws_ami.ubuntu.id`.
+
+### `count`, `for_each`, and `for` expressions
+
+- `count` creates numbered instances such as `resource.name[0]`.
+- `for_each` creates instances keyed by a set or map, such as `aws_s3_bucket.demo["dev"]`.
+- A `for` expression transforms a collection into another collection.
+
+In this project, `count.tf` creates `dev` and `prod` S3 buckets with `for_each`. Read the commented `count` version to compare the two addresses and their behavior when items are added or removed.
+
+### Terraform state
+
+State maps Terraform addresses to real AWS objects. It lets Terraform calculate what has changed. The S3 backend makes this state available to collaborators and enables locking with `use_lockfile = true`.
+
+Useful inspection commands:
+
+```powershell
+terraform state list
+terraform show
+terraform output
+```
+
+Treat state as sensitive. Do not edit it by hand.
+
+## Clean up
+
+When finished, remove the resources created by this project:
+
+```powershell
+terraform destroy
+```
+
+Review the destroy plan and confirm it. Also remove any test S3 buckets you created separately for the backend, following your team's state-retention policy. Check the AWS console afterward because costs can continue if resources remain.
+
+## A good learning exercise
+
+1. Run `terraform plan` and identify every resource Terraform wants to create.
+2. Change `instance_type` with `-var` and compare the plans.
+3. Change the `my_ip` value and observe the security group diff.
+4. Read the VPC module's inputs and outputs, then trace each `module.vpc.*` reference from the root.
+5. Try `terraform plan -out=tfplan`, inspect it with `terraform show tfplan`, and apply that exact plan with `terraform apply tfplan`.
+
+## Useful commands
+
+| Command | Purpose |
+| --- | --- |
+| `terraform init` | Initialize the working directory and download providers |
+| `terraform fmt -recursive` | Format Terraform files |
+| `terraform validate` | Validate configuration syntax and structure |
+| `terraform plan` | Preview changes |
+| `terraform apply` | Apply changes after confirmation |
+| `terraform output` | Display root outputs |
+| `terraform state list` | List objects tracked in state |
+| `terraform destroy` | Remove managed resources |
+
+## Continue learning
+
+- [Terraform language documentation](https://developer.hashicorp.com/terraform/language)
+- [Terraform CLI documentation](https://developer.hashicorp.com/terraform/cli)
+- [AWS provider documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [Terraform state documentation](https://developer.hashicorp.com/terraform/language/state)
